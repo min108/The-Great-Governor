@@ -4,6 +4,7 @@ import re
 import uuid
 from pathlib import Path
 
+import anyio
 import httpx
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,6 +22,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+DB_LOCK = anyio.Lock()
+
+
+@app.middleware("http")
+async def serialize_sqlite(request, call_next):
+    async with DB_LOCK:
+        return await call_next(request)
 
 CONN = None
 
